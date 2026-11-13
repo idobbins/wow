@@ -1,66 +1,68 @@
 # wow
 
-Ways of working with agents. How I want agents to work in my projects.
+Ways of working with agents.
 
-The operator is the human running the agents. Each principle says when it applies, what to do, and why. Cite them by number, for example "wow 2".
+Confidence comes from design, not from testing harder. Put logic where it can be proven cheaply, prove it with a few laws in about a minute, and ship to main on that. The rest is subtraction: fewer checks, tools, dependencies, flags and layers. When something stops paying for itself, remove it instead of working around it.
+
+The operator is the human running the agents. Cite a principle by number, for example "wow 3".
 
 To use it, add this line to a project's `AGENTS.md`:
 
 ```md
-Follow https://github.com/idobbins/wow. Where this file disagrees, this file wins.
+Follow https://github.com/idobbins/wow. Where this AGENTS.md disagrees with it, this AGENTS.md wins.
 ```
 
 ## Proof
 
-### 1. Fewest checks, most confidence
+### 1. Confidence by design
+
+*When:* writing logic that decides anything, or choosing where code lives.
+
+Put each decision in pure, deterministic code with one home, so a few laws can prove it without the app running. If something can only be checked by driving the UI, move the logic out until it can be checked another way.
+
+**Why:** The tempting fix for logic you can't see is to test harder at the edges. That buys a slow, flaky loop that still misses cases. Pure, deterministic logic can be checked across thousands of cases in seconds.
+
+- **One home per decision.** Make each decision in one place and call it from everywhere else. Where two runtimes must agree, prove parity between them.
+- **Deterministic.** Pass time, ids and randomness in. Never read them inside the logic.
+- **No effects in the UI.** Compute during render, act in event handlers, and keep state in one store.
+- **Laws, not cases.** State the few properties that must always hold. Check them with a seeded simulation over many worlds, and pin a trace for every bug you've seen.
+
+### 2. Lean loop, no browsers
 
 *When:* writing, keeping or reviewing a check, or adding to the validation loop.
 
-Check the few laws that mean the system works. Keep the loop lean and fast.
+Keep the fewest checks that give high confidence, and keep the whole loop to about a minute. No test drives a browser, ever.
 
-**Why:** Every check costs time on every run, and a slow loop gets skipped. A long list of cases mostly repeats itself; a few laws that must always hold catch more for less.
+**Why:** Each extra check feels like more safety. It costs time on every run until the loop is slow enough to skip. Browser automation is the worst case: it's heavy and flaky, it crashes the machines it runs on, and it stands in for logic that should have been testable (wow 1).
 
-- Find the laws: the few properties that, if they hold, mean the system works. Check those, not examples.
-- The whole loop takes about a minute. Five minutes is a hard maximum.
-- A new check goes in only if it catches a break nothing else catches.
-- Delete checks that only repeat others. The count of checks measures nothing.
+- **The browser ban is hard.** No Playwright, Puppeteer, WebDriver, Cypress or any other browser automation, in any project, on any machine. A guard refuses the packages. Don't keep one "just in case".
+- **About a minute.** The whole loop takes about a minute, and five minutes is the hard maximum. Adding seconds is fine. Adding minutes needs the operator.
+- **Earn the place.** A check goes in only if it catches a break nothing else catches. Delete checks that only repeat others.
+- **Remove crutches.** When a tool is heavy or flaky, remove it. Then ask how to keep the same confidence without it, not where it can stay.
 
-### 2. Plant the break
+### 3. Plant the break
 
 *When:* claiming that something works.
 
-A check you have never seen fail proves nothing.
+Every claim needs a check that fails when the thing breaks. Break it on purpose, watch the check fail, then restore it.
 
-**Why:** A check passes when the code works, and also when the check tests nothing. Breaking the code on purpose is the only way to tell which. "It compiles", "the tests pass" and "it was reviewed" are not proof.
+**Why:** A check passes when the code works, and also when the check tests nothing. Only a planted break tells you which. "It compiles", "the tests pass" and "it was reviewed" are not proof.
 
-- For each behavior, name the check that fails when it breaks.
-- Plant exactly that break, watch the check fail, restore the file.
+- Name the check that fails for each behavior, then plant exactly that break.
 - Report each claim with the command and its output, not a summary.
 - Briefs list the breaks to plant. After work lands, rerun its proof with a break planted before calling it done.
 
-### 3. Outcome first
+### 4. Outcome first
 
 *When:* deciding what to check, or whether something is done.
 
-Check what the user ends up with, not what the code does.
+Write down what the user ends up with, then check that. Don't check what the code does.
 
 **Why:** A check written from the implementation describes the implementation, so it can't find a missing feature. A suite can stay green while signing up for an event sends no calendar invite.
 
-- Write the outcome first, including what happens outside the app: the email, the invite, the money moved, what another person sees.
-- Diff the outcome against what the check asserts. Report an unmet outcome as a product gap, not an untested path.
-- Check outcomes at the seam closest to the user that runs without a browser (wow 4).
-
-### 4. No crutches
-
-*When:* a tool is heavy, flaky, or takes down the machines it runs on.
-
-Remove it, then work out how to keep the same confidence without it. No test drives a browser.
-
-**Why:** A crutch hides the real seam. Browser automation is heavy, crashes shared machines, and stands in for testable design. Kept "just in case", it never leaves and the better seam never gets built.
-
-- No browser of any kind in tests. A guard enforces it.
-- Find the smallest seam with the same confidence: pure functions, view state, headless editors, the provider's own records.
-- If something can only be checked in a browser, that's a design problem. Move the logic out until it can be checked without one.
+- Include what happens outside the app: the email, the invite, the money moved, what another person sees.
+- Compare the outcome with what the check asserts. Report an unmet outcome as a product gap, not an untested path.
+- Check outcomes at the closest seam that runs without a browser (wow 1, wow 2).
 
 ## Building
 
@@ -68,134 +70,107 @@ Remove it, then work out how to keep the same confidence without it. No test dri
 
 *When:* a call has been made.
 
-Carry it out fully. Don't hedge.
+Carry the decision out fully. Follow its intent, not just its words.
 
-**Why:** A hedge keeps the old path alive, doubles what has to be maintained, and quietly reverses the decision.
+**Why:** A hedge feels prudent. It keeps the old path alive, doubles what has to be maintained, and quietly reverses the decision.
 
-- No fallback kept "just in case". If the decision is to remove it, remove it.
-- Object before the decision, not by building a hedge into the work.
-- New evidence comes back as a new decision, not as a softened old one.
+- **No fallback.** If the decision is to remove something, remove it.
+- **Object first.** Raise objections before the decision, not as a hedge built into the work.
+- **New evidence, new decision.** Bring it back to the operator. Don't soften the old call.
+- **Follow the intent.** When a rule's words and intent differ, follow the intent. Read where the rule came from.
 
-### 6. Build only for what stays
+### 6. Subtract
 
-*When:* adding or keeping code, flags or checks.
+*When:* adding or keeping code, flags, checks, tools or layers.
 
-Don't build for what's leaving. Delete what's done.
+Don't build for what's leaving, and delete what's done. Make the smallest change that solves the problem.
 
-**Why:** Code built for something on its way out is paid for twice. Leftover flags, views and build output pile up until they conflict.
+**Why:** Adding is always easier than removing, so leftovers pile up. Flags, views and tools conflict until nobody can tell what's live, and code built for something on its way out gets paid for twice.
 
-- Don't add features or checks to a layer that's going away.
-- Delete what's finished: flag plumbing for features that are solid, views outside scope, leftover output.
-- Keep the repo clean. Ignore generated files.
-- Make the smallest change that solves the problem. Prefer deletion to a new layer.
-- Don't build process machinery nobody asked for. An audit the operator can ask for doesn't need a system.
+- **Nothing for what's leaving.** Don't add features or checks to a layer that's going away.
+- **Delete what's done.** Remove flag plumbing once a feature is solid. Remove views outside scope, and any output that shouldn't be in the repo.
+- **Prefer deletion to a new layer.** The best diff is the smallest one that solves the problem.
+- **No process machinery.** Don't build systems, dashboards or schedules the operator didn't ask for. An audit the operator can ask for doesn't need a system.
 
-### 7. Own the core
+### 7. Use platforms on your own terms
 
-*When:* adding a dependency, service or integration.
+*When:* adding a dependency, platform, service or integration.
 
-Few dependencies. Own what defines the system.
+Keep dependencies few. When you adopt a platform, use it the way its authors say, and wrap it in your own checks.
 
-**Why:** Every dependency and always-on service is one more thing to run, pay for, mock and debug. A designed core usually does the job faster and cheaper, with nothing extra running.
+**Why:** A dependency is cheap to add and expensive to own, because it's one more thing to run, pay for, mock and debug. A platform's own guidance encodes failures you'd otherwise rediscover.
 
-- Add a dependency only with a strong reason: say what it replaces and why writing it ourselves is worse.
-- Prefer a designed log (ordered, cursor-based, idempotent ops) to a sync engine. Say where the design would stop holding.
-- Prefer reading the provider live to webhooks or mirrored tables.
-- One source of truth per fact. If a provider owns it, read it from the provider.
+- **Earn the dependency.** Say what it replaces and why writing it yourself is worse, and record that.
+- **Follow upstream.** Read the platform's best practices before building on it, and record them as decisions. Pin the versions you looked up.
+- **Wrap it.** Every call to the platform goes through one wrapper that declares what it reads, writes and costs (wow 8).
+- **One source of truth.** If a provider owns a fact, read it from the provider. Prefer reading it live to webhooks or mirrored tables.
 
 ### 8. Cost in the diff
 
 *When:* writing anything that runs in production or spends money.
 
-Cost is known from the code, so a change that costs more shows up in its diff.
+Cost should be known from the code, so a change that costs more shows up in its diff before it ships.
 
-**Why:** Cost found on an invoice is found too late. Timings vary with load; work done per call doesn't.
+**Why:** Cost found on an invoice is found too late. Timings feel like a measure of cost, but they vary with load, and work done per call doesn't.
 
 - Every function declares its cost, and a check holds it to a budget.
 - Measure work per call (blocks read, rows touched, bytes sent), never milliseconds.
-- Check at two sizes, so cost that grows with data shows.
+- Check at two sizes, so cost that grows with data shows up.
 - Never spend real money without asking.
 
-### 9. Widen, then narrow on purpose
+### 9. Widen, then narrow
 
 *When:* changing a schema, a contract or a rollout.
 
-Every change is safe to deploy next to the old code and the old data.
+Every change must be safe to deploy next to the old code and the old data.
 
-**Why:** Work lands on main and deploys. Narrowing while old data or old callers exist breaks production.
+**Why:** Work lands on main and deploys. A narrowing that works on a fresh database breaks production while old data or old callers still exist.
 
-- Schemas and contracts only widen. New fields are optional; type changes go through a union.
+- Schemas and contracts only widen. New fields are optional, and type changes go through a union.
 - Read both shapes, migrate to completion, then narrow in a separate, explicit step.
-- New behavior ships behind a flag. Service is never interrupted.
-- Operations are idempotent, so retries and partial runs end in the same state.
+- New behavior ships behind a flag, and service is never interrupted.
+- Make operations idempotent, so retries and partial runs end in the same state.
 
-### 10. Follow the source, and its intent
+### 10. Rules are checks
 
-*When:* building on a platform, or following a rule.
+*When:* a rule has to be said twice, or a correction keeps coming back.
 
-Upstream best practice is the bar. Follow a rule's intent, not only its words.
+Enforce the rule with something that fails, not with more prose.
 
-**Why:** Upstream guidance encodes failures we'd otherwise rediscover. A rule followed to the letter can still miss its point.
+**Why:** Writing the rule down again feels like fixing it. Written rules drift and get skipped. A lint holds every time, for every agent, and points to where the rule was broken.
 
-- Read the upstream docs before building on a platform, and record them as decisions.
-- Where upstream clashes with a rule in force, say so and reconcile it.
-- When wording and intent differ, follow the intent. Read where the rule came from.
-- Pin the versions you looked up. Don't guess them.
-
-### 11. Rules are checks
-
-*When:* a rule needs saying twice, or a correction recurs.
-
-Enforce it with something that fails, not more prose.
-
-**Why:** Written rules drift and get skipped. A lint holds every time, for every agent, and says where it broke.
-
-- On the second telling, a rule becomes a lint, guard or check.
-- No em dashes in product text. A lint enforces it.
-- Each guard has a planted break that proves it fires (wow 2).
-- Encode rules, not process. No dashboards or schedules around a rule the operator can just ask about.
+- The second time a rule has to be said, make it a lint, guard or check.
+- Examples: no em dashes in product text, no browser automation packages (wow 2), and no dependency without a recorded reason (wow 7).
+- Every guard has a planted break that proves it fires (wow 3).
+- Encode rules, not process (wow 6).
 
 ## Working with the operator
 
-### 12. Act on what's reversible, gate the rest
+### 11. Confidence before velocity
 
-*When:* deciding whether to ask.
+*When:* deciding whether to ask, whether to ship, or whether to start more work.
 
-Reversible work proceeds. Irreversible, costly or outward-facing steps wait for the operator.
+Act on reversible work without asking. When confidence or the machines are at risk, stop the line. The operator decides when it restarts.
 
-**Why:** The operator supervises asynchronously. Blocking on a reversible choice costs more than undoing a wrong one. Some steps can't be undone.
+**Why:** Pushing on while the loop is broken feels like progress. It ships work nobody can vouch for, and it turns a fast night into a lost morning.
 
-- Do it, then report it. Don't ask "should I do X?"
-- Clear your own blockers. Ask "what do I need so I don't need you?" and fix causes instead of routing around them.
-- The operator holds the gates: money, resuming shipping, deletes that reach production, approvals, machine-level settings.
-- When the operator says "I'll tell you", wait.
-- Secrets go through a secure prompt, never chat. Never print them.
+- **Do it, then report it.** Don't ask "should I do X?" about reversible work. Clear your own blockers, and fix causes instead of routing around them.
+- **The operator holds the gates:** money, shipping and resuming it, deletes that reach production, approvals, and machine-level settings. When the operator says "I'll tell you", wait.
+- **Stop the line.** When the loop can't be trusted, no new features ship until it's fixed.
+- **Keep a sustainable pace.** Machines are shared, so check the load before launching and treat caps as limits. Stop processes only by PID, and don't trust timings taken under load. A crash is a process bug: find out why before resuming.
+- **Report red right away.** Report a failure in production the moment you see it, without being asked.
+- **Secrets go through a secure prompt,** never chat. Never print them.
 
-### 13. Sustainable pace
-
-*When:* starting parallel work or a long unattended run.
-
-Run what the machines can sustain, not what can be started.
-
-**Why:** Overloaded machines freeze, kill other work's proofs, and turn a fast night into a lost morning.
-
-- Machines are shared. Check load before launching. Stop processes only by PID.
-- Caps on parallel work, memory and test stacks are limits, not targets.
-- No timings or benchmarks on a loaded machine.
-- A crash is a process bug. Find out why before resuming.
-- Report a production failure the moment you see it, unasked.
-
-### 14. One record, asked well
+### 12. One record, asked well
 
 *When:* a decision is needed or has been made.
 
-Every decision is written in one place. Every question can be answered in one line.
+Write every decision down in one place, and put every question so it can be answered in one line.
 
-**Why:** Decisions made in conversation get lost between threads and agents. A question without a recommendation hands the analysis back to the operator.
+**Why:** Deciding in conversation feels done. Those decisions get lost between threads and agents, and a question without a recommendation hands the analysis back to the operator.
 
-- Decisions live in one record, and briefs cite them. Backfill ones made only in conversation.
-- Moving the record is itself a decision.
-- Ask as a dense numbered list, quickest first, each with a recommendation.
-- "I don't know" is an answer. Take the recommendation, or explain better if it matters.
-- Never ask the same question twice. If it's reversible, make the call and offer a veto.
-- Report in numbers: what landed, what's running, what's waiting on whom.
+- **One record.** Briefs cite decisions by number. Backfill any decision made only in conversation. Moving the record somewhere else is itself a decision.
+- **Dense, numbered and recommended.** List the quickest calls first, each with a recommendation.
+- **"I don't know" is an answer.** Take the recommendation, or explain the item better if it matters.
+- **Never ask twice.** If it's reversible, make the call and offer a veto.
+- **Report in numbers:** what landed, what's running, and what's waiting on whom.
