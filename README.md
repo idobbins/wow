@@ -185,6 +185,18 @@ Write every decision down in one place, and put every question so it can be answ
 - **Never ask twice.** If it's reversible, make the call and offer a veto.
 - **Report in numbers:** what landed, what's running, and what's waiting on whom.
 
+## Toolchain
+
+For JavaScript and TypeScript, use the [Oxc](https://oxc.rs) tools: one fast toolchain with little config, which gives the same result on every run (wow 2, wow 8). Pin exact versions and upgrade them together.
+
+- **Lint:** oxlint. No ESLint. Move a config over with `oxlint-migrate`, and write a rule oxlint lacks as a JS plugin (`wow/oxlint` is one).
+- **Format:** oxfmt. No Prettier or Biome. The loop runs `oxfmt --check .`, and `oxfmt .` fixes it.
+- **Type check:** [tsrs](https://github.com/oxc-project/tsrs), the Rust port of the TypeScript 7 checker. Pin its exact version, since it ships as prereleases. No `tsc` or `tsgo`.
+- **Type-aware lint:** with oxlint 1.92 or later and tsrs installed, oxlint uses tsrs in place of tsgolint. `oxlint --type-aware --type-check` lints and type-checks in one run, parsing and checking each program once, and fails on a type error. Drop the separate type-check step (wow 2).
+- **Cap the threads on a shared machine** (wow 11): `RAYON_NUM_THREADS=4` for the lint run, and `--checkers 4` for `tsrs --noEmit --fast`.
+- **Code that reads code:** `oxc-parser`, `oxc-resolver` and `oxc-transform`, not Babel, acorn or enhanced-resolve.
+- **Running TypeScript:** `node script.ts`, with Node 24's own type stripping. Add no runner (wow 7).
+
 ## Shared checks
 
 The rules a check can hold (wow 10) ship from this repo, so projects install them instead of copying. Pin a commit as a dev dependency: `"wow": "github:idobbins/wow#<sha>"`. Config is one `wow` key in the root `package.json`.
@@ -194,5 +206,4 @@ The rules a check can hold (wow 10) ship from this repo, so projects install the
 - **dashes.** Fails on an em dash in shipped code, outside comments: `"dashes": { "roots": ["apps/web/src"], "ignore": ["**/*.test.ts"] }`.
 - **Lint.** Add `"jsPlugins": ["wow/oxlint"]` to `.oxlintrc.json` and turn rules on by name, as `"wow/no-silent-catch": "error"`. The rules: `require-disable-reason`, `no-low-value-comments`, `no-silent-catch`, `no-double-cast`, and for Convex, `no-catch-around-own-writes` and `no-any-returns`. The two catch rules take `{ "throwers": [...] }`, the calls that rethrow.
 - **Ratchet.** `pnpm wow-ratchet [paths]` runs the project's own oxlint in place of a bare one. Each (rule, file) keeps exactly its budgeted count, so one more fails and one fewer fails until `wow-ratchet --write` lowers it. `--seed=<rule>` records a new rule's counts as it lands, and nothing raises one. Config: `"ratchet": { "budgets": "lint/grandfathered", "args": [...], "groups": [...], "concurrency": 1 }`. Groups are folders linted apart, and concurrency caps how many oxlint runs at once. It defaults to 1, since each run can take gigabytes on a shared machine (wow 11).
-- **Type check.** Use [tsrs](https://github.com/oxc-project/tsrs), the Rust port of the TypeScript 7 checker. Pin its exact version, since it ships as prereleases. With oxlint 1.92 or later and tsrs installed, one run lints and type-checks: `oxlint --type-aware --type-check`, which parses and checks each program once and fails on a type error. Drop the separate `tsc` step (wow 2). Cap its threads on a shared machine (wow 11): `RAYON_NUM_THREADS=4` for the lint run, and `--checkers 4` for `tsrs --noEmit --fast`.
 - **Proof.** `npm test` plants a break for every guard, rule and ratchet step (wow 3).
