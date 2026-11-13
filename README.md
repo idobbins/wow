@@ -184,3 +184,14 @@ Write every decision down in one place, and put every question so it can be answ
 - **"I don't know" is an answer.** Take the recommendation, or explain the item better if it matters.
 - **Never ask twice.** If it's reversible, make the call and offer a veto.
 - **Report in numbers:** what landed, what's running, and what's waiting on whom.
+
+## Shared checks
+
+The rules a check can hold (wow 10) ship from this repo, so projects install them instead of copying. Pin a commit as a dev dependency: `"wow": "github:idobbins/wow#<sha>"`.
+
+- **Guards.** `pnpm wow-guard all` runs each guard from the project root, or name one: `deps` or `dashes`.
+- **deps.** Refuses browser automation packages in any manifest, with no opt-out (wow 2). Every other dependency needs a reason in `dependencies.json`: `{ "npm": { "apps/web": { "react": "the UI" } }, "cargo": { ... } }`, keyed by the manifest's folder (wow 7).
+- **dashes.** Fails on an em dash in shipped code, outside comments.
+- **Config.** One `wow` key in the root `package.json`: `"wow": { "dashes": { "roots": ["apps/web/src"], "ignore": ["**/*.test.ts"] } }`.
+- **Lint.** Add `"jsPlugins": ["wow/oxlint"]` to `.oxlintrc.json`, then turn rules on by name: `"wow/require-disable-reason": "error"`.
+- **Proof.** `npm test` plants a break for every guard and rule (wow 3).
