@@ -1,10 +1,11 @@
-// Rules oxlint has no built-in for (ESLint rule API). Load with "jsPlugins": ["wow/oxlint"].
+// wow/require-disable-reason. Ported from hubfront (lint/hubfront-plugin.js), published with the
+// owner's OK.
 
 // `oxlint-disable-next-line <rule> -- <reason>` (and the eslint-* spellings): the reason follows ` -- `.
 const DISABLE = /^\s*(?:oxlint|eslint)-disable(?:-next-line|-line)?(?:\s|$)/;
 const REASON = /\s--\s+\S/;
 
-const requireDisableReason = {
+export const requireDisableReason = {
   meta: {
     type: "problem",
     docs: { description: "Lint disable comments must say why, after ` -- `." },
@@ -23,9 +24,4 @@ const requireDisableReason = {
       },
     };
   },
-};
-
-export default {
-  meta: { name: "wow" },
-  rules: { "require-disable-reason": requireDisableReason },
 };

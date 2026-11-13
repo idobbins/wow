@@ -14,6 +14,8 @@ export function project(files) {
   after(() => rmSync(root, { recursive: true }));
   mkdirSync(join(root, "node_modules"));
   symlinkSync(WOW, join(root, "node_modules/wow"));
+  mkdirSync(join(root, "node_modules/.bin"));
+  symlinkSync(join(WOW, "node_modules/oxlint/bin/oxlint"), join(root, "node_modules/.bin/oxlint"));
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     const text = typeof content === "string" ? content : JSON.stringify(content);
@@ -31,9 +33,13 @@ const run = (root, command, args) => {
 export const guard = (root, command) =>
   run(root, process.execPath, [join(WOW, "bin/wow-guard.mjs"), command]);
 
+/** `wow-ratchet <args>` in `root`. */
+export const ratchet = (root, ...args) =>
+  run(root, process.execPath, [join(WOW, "bin/wow-ratchet.mjs"), ...args]);
+
 /** oxlint's diagnostics for `file` in `root`, as "line:column code message". */
 export function lint(root, file) {
-  const { stdout } = run(root, join(WOW, "node_modules/.bin/oxlint"), ["--format", "json", file]);
+  const { stdout } = run(root, join(root, "node_modules/.bin/oxlint"), ["--format", "json", file]);
   return JSON.parse(stdout).diagnostics.map(
     (d) => `${d.labels[0].span.line}:${d.labels[0].span.column} ${d.code} ${d.message}`,
   );

@@ -5,16 +5,19 @@
   "license": "MIT",
   "repository": "github:idobbins/wow",
   "bin": {
-    "wow-guard": "./bin/wow-guard.mjs"
+    "wow-guard": "./bin/wow-guard.mjs",
+    "wow-ratchet": "./bin/wow-ratchet.mjs"
   },
   "files": [
     "bin",
     "guards",
-    "oxlint.mjs"
+    "oxlint",
+    "ratchet",
+    "NOTICE"
   ],
   "type": "module",
   "exports": {
-    "./oxlint": "./oxlint.mjs"
+    "./oxlint": "./oxlint/index.mjs"
   },
   "scripts": {
     "test": "node --test test/*.test.mjs"

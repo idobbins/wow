@@ -187,11 +187,11 @@ Write every decision down in one place, and put every question so it can be answ
 
 ## Shared checks
 
-The rules a check can hold (wow 10) ship from this repo, so projects install them instead of copying. Pin a commit as a dev dependency: `"wow": "github:idobbins/wow#<sha>"`.
+The rules a check can hold (wow 10) ship from this repo, so projects install them instead of copying. Pin a commit as a dev dependency: `"wow": "github:idobbins/wow#<sha>"`. Config is one `wow` key in the root `package.json`.
 
 - **Guards.** `pnpm wow-guard all` runs each guard from the project root, or name one: `deps` or `dashes`.
 - **deps.** Refuses browser automation packages in any manifest, with no opt-out (wow 2). Every other dependency needs a reason in `dependencies.json`: `{ "npm": { "apps/web": { "react": "the UI" } }, "cargo": { ... } }`, keyed by the manifest's folder (wow 7).
-- **dashes.** Fails on an em dash in shipped code, outside comments.
-- **Config.** One `wow` key in the root `package.json`: `"wow": { "dashes": { "roots": ["apps/web/src"], "ignore": ["**/*.test.ts"] } }`.
-- **Lint.** Add `"jsPlugins": ["wow/oxlint"]` to `.oxlintrc.json`, then turn rules on by name: `"wow/require-disable-reason": "error"`.
-- **Proof.** `npm test` plants a break for every guard and rule (wow 3).
+- **dashes.** Fails on an em dash in shipped code, outside comments: `"dashes": { "roots": ["apps/web/src"], "ignore": ["**/*.test.ts"] }`.
+- **Lint.** Add `"jsPlugins": ["wow/oxlint"]` to `.oxlintrc.json` and turn rules on by name, as `"wow/no-silent-catch": "error"`. The rules: `require-disable-reason`, `no-low-value-comments`, `no-silent-catch`, `no-double-cast`, and for Convex, `no-catch-around-own-writes` and `no-any-returns`. The two catch rules take `{ "throwers": [...] }`, the calls that rethrow.
+- **Ratchet.** `pnpm wow-ratchet [paths]` runs the project's own oxlint in place of a bare one. Each (rule, file) keeps exactly its budgeted count, so one more fails and one fewer fails until `wow-ratchet --write` lowers it. `--seed=<rule>` records a new rule's counts as it lands, and nothing raises one. Config: `"ratchet": { "budgets": "lint/grandfathered", "args": [...], "groups": [...], "concurrency": 1 }`. Groups are folders linted apart, and concurrency caps how many oxlint runs at once. It defaults to 1, since each run can take gigabytes on a shared machine (wow 11).
+- **Proof.** `npm test` plants a break for every guard, rule and ratchet step (wow 3).
