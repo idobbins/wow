@@ -2,7 +2,7 @@
 
 Ways of working with agents.
 
-Confidence comes from design, not from testing harder. Put logic where it can be proven cheaply, prove it with a few laws in about a minute, and ship to main on that. The rest is subtraction: fewer checks, tools, dependencies, flags and layers. When something stops paying for itself, remove it instead of working around it.
+Confidence comes from design, not from testing harder. Put logic where it can be proven cheaply, prove it with a few laws in about a minute, and ship to main on that. The rest is subtraction: fewer checks, tools, dependencies, flags and layers. When something stops paying for itself, remove it instead of working around it. Many agents in one codebase add entropy by default, so every change has to leave the code smaller or more coherent, and every read and byte has to be worth it.
 
 The operator is the human running the agents. Cite a principle by number, for example "wow 3".
 
@@ -79,18 +79,26 @@ Carry the decision out fully. Follow its intent, not just its words.
 - **New evidence, new decision.** Bring it back to the operator. Don't soften the old call.
 - **Follow the intent.** When a rule's words and intent differ, follow the intent. Read where the rule came from.
 
-### 6. Subtract
+### 6. Fight entropy
 
-*When:* adding or keeping code, flags, checks, tools or layers.
+*When:* adding or keeping code, flags, checks, tools, layers or docs.
 
-Don't build for what's leaving, and delete what's done. Make the smallest change that solves the problem.
+Many agents working in one codebase make it drift two ways: leftovers pile up, and the parts diverge. Subtract what's done, and converge on one way of doing each thing.
 
-**Why:** Adding is always easier than removing, so leftovers pile up. Flags, views and tools conflict until nobody can tell what's live, and code built for something on its way out gets paid for twice.
+**Why:** Each agent solves its own task locally and correctly, and that's the trap. Adding is easier than removing, and a new helper is easier than finding the old one. Nothing breaks, but flags conflict, three patterns do one job, and the docs stop matching the code until nobody can tell what's live.
 
+**Subtract**
 - **Nothing for what's leaving.** Don't add features or checks to a layer that's going away.
 - **Delete what's done.** Remove flag plumbing once a feature is solid. Remove views outside scope, and any output that shouldn't be in the repo.
 - **Prefer deletion to a new layer.** The best diff is the smallest one that solves the problem.
 - **No process machinery.** Don't build systems, dashboards or schedules the operator didn't ask for. An audit the operator can ask for doesn't need a system.
+
+**Converge**
+- **One way to do each thing.** When there's a way, use it. When there are two, pick one, migrate to it, and lint the other out (wow 10).
+- **Reuse before writing.** Look for the existing helper, type or pattern before adding a new one.
+- **Docs can't go stale.** Generate them from the code, or check them in the loop so they fail when they drift.
+- **Touch only what the task needs.** Format and stage only the files you changed. File unrelated fixes instead of folding them in.
+- **Leave it more coherent.** Every change leaves its area at least as consistent as it found it.
 
 ### 7. Use platforms on your own terms
 
@@ -105,18 +113,20 @@ Keep dependencies few. When you adopt a platform, use it the way its authors say
 - **Wrap it.** Every call to the platform goes through one wrapper that declares what it reads, writes and costs (wow 8).
 - **One source of truth.** If a provider owns a fact, read it from the provider. Prefer reading it live to webhooks or mirrored tables.
 
-### 8. Cost in the diff
+### 8. Respect data and compute
 
-*When:* writing anything that runs in production or spends money.
+*When:* writing anything that reads, writes, sends or runs in production.
 
-Cost should be known from the code, so a change that costs more shows up in its diff before it ships.
+Treat every read, write and byte as something you have to justify. Declare what each operation touches, measure the work it does, and fail the check when it does more.
 
-**Why:** Cost found on an invoice is found too late. Timings feel like a measure of cost, but they vary with load, and work done per call doesn't.
+**Why:** Over-reading is invisible on a small dataset and on a fast machine, so it ships. It shows up later as a slow screen, a large invoice, or one action doing ten times the reads it needs. Timings feel like a measure of this, but they vary with load, and work done per call doesn't.
 
-- Every function declares its cost, and a check holds it to a budget.
-- Measure work per call (blocks read, rows touched, bytes sent), never milliseconds.
-- Check at two sizes, so cost that grows with data shows up.
-- Never spend real money without asking.
+- **Declare it.** Every operation declares what it reads and writes, and how many bytes it reads, writes and returns per call. Touching anything undeclared fails the check.
+- **Measure work, not time.** Gate on reads, blocks, rows and bytes per call, never milliseconds, so the number is the same on every run.
+- **Check at two sizes.** Run at a small size and at ten times that size. Fail when work per call grows with the data, or when a large table is scanned.
+- **Read only what's used.** Fetch what the screen or the caller needs, and no more. Make the read count of a common action a gate.
+- **Cost in the diff.** Turn the measured work into money and hold it to a budget, so a change that costs more shows up before it ships.
+- **Never spend real money without asking.**
 
 ### 9. Widen, then narrow
 
