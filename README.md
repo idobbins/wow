@@ -179,7 +179,7 @@ Write every decision down in one place, and put every question so it can be answ
 
 **Why:** Deciding in conversation feels done. Those decisions get lost between threads and agents, and a question without a recommendation hands the analysis back to the operator.
 
-- **One record.** Briefs cite decisions by number. Backfill any decision made only in conversation. Moving the record somewhere else is itself a decision.
+- **One record.** Decisions go in the work graph, on the node they decide (wow 13), and briefs cite them by node id. Backfill any decision made only in conversation. Moving the record somewhere else is itself a decision.
 - **Dense, numbered and recommended.** List the quickest calls first, each with a recommendation.
 - **"I don't know" is an answer.** Take the recommendation, or explain the item better if it matters.
 - **Never ask twice.** If it's reversible, make the call and offer a veto.
@@ -187,17 +187,18 @@ Write every decision down in one place, and put every question so it can be answ
 
 ### 13. Plan from the graph
 
-*When:* choosing what agents build next, and in what order.
+*When:* starting, finishing or choosing work.
 
-Derive the plan from the tracker each time. Build only what's ready, in waves that share no files.
+Each repo keeps its work as a graph in `.wow/dag.jsonl`, and its goal is done: every node done, with proof. Record a unit before it starts, and update it whenever its status changes. Plan by querying the graph with jq ([format and queries](docs/dag.md)), and build only what's ready, in waves that share no files.
 
-**Why:** A stored plan feels like control, but it drifts: links go stale, blockers hide in item text, and two agents on one file undo each other.
+**Why:** A plan kept in chat or in a separate tracker drifts from the code: links go stale, blockers hide in item text, and two agents on one file undo each other. A graph in the repo changes in the same commit as the work, and a guard checks it on every run.
 
-- **The tracker is the record (wow 12).** Items link only their true blockers. Ship order is a queue, not a blocker. Never store the graph (wow 6).
-- **Read, then propose.** Find cycles, links to missing or closed items, and blockers named only in text. Items touching the same files block each other. Fixes wait for the operator's yes.
-- **Ready means** open, every blocker closed, a clear outcome (wow 4), known files, a planted break (wow 3), no open decision and nothing external. An item missing one of these becomes a question, ranked by what its answer unblocks (wow 12). Plan nothing else.
+- **The file is the record (wow 12).** A node lists only its true deps; ship order is a queue, not a dep. The operator's answers go in its `decisions`, verbatim, with who and when.
+- **Keep it current.** Change a node in the commit that changes its status. Mark it done in the commit that lands the work, with the proof's command and output (wow 3).
+- **Read, then propose.** Make a blocker named only in text a dep. Changing deps you didn't add waits for the operator's yes.
+- **Ready means** todo, every dep done, a clear outcome (wow 4), known files, a planted break (wow 3), no open decision and nothing external. A node missing one of these becomes a question, ranked by what its answer unblocks (wow 12). Plan nothing else.
 - **Waves within the cap.** Count work in flight against the cap (wow 11), and share no files with it. Start the longest piece on each goal's critical path first. Everything ships through one queue, usually the bottleneck.
-- **Re-plan on events:** a unit lands or fails, an answer arrives, work comes in. Rerun the ready query. A failed unit goes back to building, never ahead. Rebuild the whole graph only for large intake.
+- **Re-plan on events:** a unit lands or fails, an answer arrives, work comes in. Rerun the ready query. A failed unit goes back to building, never ahead.
 
 ## Toolchain
 
@@ -215,9 +216,10 @@ For JavaScript and TypeScript, use the [Oxc](https://oxc.rs) tools: one fast too
 
 The rules a check can hold (wow 10) ship from this repo, so projects install them instead of copying. Pin a commit as a dev dependency: `"wow": "github:idobbins/wow#<sha>"`. Config is one `wow` key in the root `package.json`.
 
-- **Guards.** `pnpm wow-guard all` runs each guard from the project root, or name one: `deps` or `dashes`.
+- **Guards.** `pnpm wow-guard all` runs each guard from the project root, or name one: `deps`, `dashes` or `dag`.
 - **deps.** Refuses browser automation packages in any manifest, with no opt-out (wow 2). Every other dependency needs a reason in `dependencies.json`: `{ "npm": { "apps/web": { "react": "the UI" } }, "cargo": { ... } }`, keyed by the manifest's folder (wow 7).
 - **dashes.** Fails on an em dash in shipped code, outside comments: `"dashes": { "roots": ["apps/web/src"], "ignore": ["**/*.test.ts"] }`.
+- **dag.** Checks `.wow/dag.jsonl` (wow 13): one node per line with known fields and status, ids unique and sorted, every dep a node, and no cycle. `all` skips a project that has no file yet; `wow-guard dag` requires one.
 - **Lint.** Add `"jsPlugins": ["wow/oxlint"]` to `.oxlintrc.json` and turn rules on by name, as `"wow/no-silent-catch": "error"`. The rules: `require-disable-reason`, `no-low-value-comments`, `no-silent-catch`, `no-double-cast`, and for Convex, `no-catch-around-own-writes` and `no-any-returns`. The two catch rules take `{ "throwers": [...] }`, the calls that rethrow.
 - **Ratchet.** `pnpm wow-ratchet [paths]` runs the project's own oxlint in place of a bare one. Each (rule, file) keeps exactly its budgeted count, so one more fails and one fewer fails until `wow-ratchet --write` lowers it. `--seed=<rule>` records a new rule's counts as it lands, and nothing raises one. Config: `"ratchet": { "budgets": "lint/grandfathered", "args": [...], "groups": [...], "concurrency": 1 }`. Groups are folders linted apart, and concurrency caps how many oxlint runs at once. It defaults to 1, since each run can take gigabytes on a shared machine (wow 11).
 - **Proof.** After `npm ci`, `npm test` plants a break for every guard, rule and ratchet step (wow 3).

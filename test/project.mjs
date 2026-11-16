@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after } from "node:test";
 
-const WOW = join(import.meta.dirname, "..");
+export const WOW = join(import.meta.dirname, "..");
 const OXLINT = join(WOW, "node_modules/oxlint/bin/oxlint");
 export const DASH = "\u2014";
 
