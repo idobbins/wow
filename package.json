@@ -20,7 +20,7 @@
     "./oxlint": "./oxlint/index.mjs"
   },
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test --test-global-setup=test/project.mjs test/*.test.mjs"
   },
   "devDependencies": {
     "oxlint": "1.91.0"

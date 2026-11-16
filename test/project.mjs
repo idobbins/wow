@@ -1,12 +1,20 @@
 // A throwaway project on disk, and the commands a project runs against it.
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { after } from "node:test";
 
 const WOW = join(import.meta.dirname, "..");
+const OXLINT = join(WOW, "node_modules/oxlint/bin/oxlint");
 export const DASH = "\u2014";
+
+/** Run once before the tests (--test-global-setup): every project links wow's own oxlint. */
+export function globalSetup() {
+  if (existsSync(OXLINT)) return;
+  console.error("wow's dev dependencies aren't installed: run `npm ci`, then `npm test`.");
+  process.exit(1);
+}
 
 /** Writes `files` ({ path: text or JSON value }) into a new directory, with wow installed. */
 export function project(files) {
@@ -15,7 +23,7 @@ export function project(files) {
   mkdirSync(join(root, "node_modules"));
   symlinkSync(WOW, join(root, "node_modules/wow"));
   mkdirSync(join(root, "node_modules/.bin"));
-  symlinkSync(join(WOW, "node_modules/oxlint/bin/oxlint"), join(root, "node_modules/.bin/oxlint"));
+  symlinkSync(OXLINT, join(root, "node_modules/.bin/oxlint"));
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     const text = typeof content === "string" ? content : JSON.stringify(content);
