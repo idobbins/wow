@@ -185,6 +185,20 @@ Write every decision down in one place, and put every question so it can be answ
 - **Never ask twice.** If it's reversible, make the call and offer a veto.
 - **Report in numbers:** what landed, what's running, and what's waiting on whom.
 
+### 13. Plan from the graph
+
+*When:* choosing what agents build next, and in what order.
+
+Derive the plan from the tracker each time. Build only what's ready, in waves that share no files.
+
+**Why:** A stored plan feels like control, but it drifts: links go stale, blockers hide in item text, and two agents on one file undo each other.
+
+- **The tracker is the record (wow 12).** Items link only their true blockers. Ship order is a queue, not a blocker. Never store the graph (wow 6).
+- **Read, then propose.** Find cycles, links to missing or closed items, and blockers named only in text. Items touching the same files block each other. Fixes wait for the operator's yes.
+- **Ready means** open, every blocker closed, a clear outcome (wow 4), known files, a planted break (wow 3), no open decision and nothing external. An item missing one of these becomes a question, ranked by what its answer unblocks (wow 12). Plan nothing else.
+- **Waves within the cap.** Count work in flight against the cap (wow 11), and share no files with it. Start the longest piece on each goal's critical path first. Everything ships through one queue, usually the bottleneck.
+- **Re-plan on events:** a unit lands or fails, an answer arrives, work comes in. Rerun the ready query. A failed unit goes back to building, never ahead. Rebuild the whole graph only for large intake.
+
 ## Toolchain
 
 For JavaScript and TypeScript, use the [Oxc](https://oxc.rs) tools: one fast toolchain with little config, which gives the same result on every run (wow 2, wow 8). Pin exact versions and upgrade them together.
