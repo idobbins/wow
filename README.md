@@ -165,7 +165,7 @@ Act on reversible work without asking. When confidence or the machines are at ri
 **Why:** Pushing on while the loop is broken feels like progress. It ships work nobody can vouch for, and it turns a fast night into a lost morning.
 
 - **Do it, then report it.** Don't ask "should I do X?" about reversible work. Clear your own blockers, and fix causes instead of routing around them.
-- **The operator holds the gates:** money, deploys, changes to running services, deletes that reach production, resuming after a stop, and machine-level settings. Push to main on your own once the loop passes and the proof is attached (wow 3). When the operator says "I'll tell you", wait.
+- **The operator holds the gates:** money, other changes to running services, deletes that reach production, resuming after a stop, and machine-level settings. Once the loop passes with proof attached (wow 3), push to main yourself; the pipeline deploys it. When the operator says "I'll tell you", wait.
 - **Stop the line.** When the loop can't be trusted, no new features ship until it's fixed.
 - **Keep a sustainable pace.** Machines are shared, so check the load before launching and treat caps as limits. Stop processes only by PID, and don't trust timings taken under load. A crash is a process bug: find out why before resuming.
 - **Report red right away.** Report a failure in production the moment you see it, without being asked.
