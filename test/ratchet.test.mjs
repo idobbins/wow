@@ -110,6 +110,14 @@ test("an oxlint run that can't lint leaves the budgets as they were", () => {
     stderr:
       'wow-ratchet: set "wow": { "ratchet": { "budgets": "lint/grandfathered" } } in package.json\n',
   });
+  const uninstalled = project({ "package.json": PKG });
+  rmSync(join(uninstalled, "node_modules/.bin/oxlint"));
+  assert.deepEqual(ratchet(uninstalled), {
+    status: 2,
+    stdout: "",
+    stderr:
+      "wow-ratchet: no node_modules/.bin/oxlint; install dependencies, or add oxlint as a dev dependency\n",
+  });
 });
 
 // A fake oxlint that holds for 300 ms, then logs how many copies of it are running.

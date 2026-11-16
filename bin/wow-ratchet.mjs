@@ -29,7 +29,8 @@ const fail = (message) => {
 const config = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8")).wow?.ratchet;
 if (typeof config?.budgets !== "string")
   fail('set "wow": { "ratchet": { "budgets": "lint/grandfathered" } } in package.json');
-if (!existsSync(OXLINT)) fail("no node_modules/.bin/oxlint; add oxlint as a dev dependency");
+if (!existsSync(OXLINT))
+  fail("no node_modules/.bin/oxlint; install dependencies, or add oxlint as a dev dependency");
 const DIR = path.join(ROOT, config.budgets);
 const SHOWN = `${config.budgets}/`;
 const FLAGS = config.args ?? [];
