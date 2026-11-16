@@ -49,7 +49,7 @@ Every claim needs a check that fails when the thing breaks. Break it on purpose,
 **Why:** A check passes when the code works, and also when the check tests nothing. Only a planted break tells you which. "It compiles", "the tests pass" and "it was reviewed" are not proof.
 
 - Name the check that fails for each behavior, then plant exactly that break.
-- Report each claim with the command and its output, not a summary.
+- Report each claim with the command and its output, not a summary. For a UI change, also attach a before and an after screenshot, taken once with your own screenshot tool. That's evidence, not a test, so it adds no browser script or dependency (wow 2).
 - Briefs list the breaks to plant. After work lands, rerun its proof with a break planted before calling it done.
 
 ### 4. Outcome first
