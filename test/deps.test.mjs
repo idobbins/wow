@@ -44,6 +44,112 @@ test("refuses browser automation even when dependencies.json gives a reason", ()
   });
 });
 
+test("refuses headless browsers for the edge and serverless without a runtime entry", () => {
+  const root = project({
+    "package.json": { dependencies: { "@cloudflare/puppeteer": "1", "@sparticuz/chromium": "1" } },
+    "dependencies.json": {
+      npm: {
+        ".": { "@cloudflare/puppeteer": "renders PDFs", "@sparticuz/chromium": "the browser" },
+      },
+    },
+  });
+  assert.deepEqual(guard(root, "deps"), {
+    status: 1,
+    stdout: "",
+    stderr: [
+      "wow-guard deps: package.json: @cloudflare/puppeteer drives a browser, and browser tests are banned (wow 2)",
+      "wow-guard deps: package.json: @sparticuz/chromium drives a browser, and browser tests are banned (wow 2)",
+      "",
+    ].join("\n"),
+  });
+});
+
+test("product code may run a headless browser listed under runtime", () => {
+  const root = project({
+    "package.json": { devDependencies: { oxlint: "1.91.0" } },
+    "apps/pdf/package.json": { dependencies: { "playwright-core": "1", hono: "4" } },
+    "crates/render/Cargo.toml":
+      '[package]\nname = "render"\n\n[dependencies]\nchromiumoxide = "0.7"\n',
+    "dependencies.json": {
+      npm: { ".": { oxlint: "lint" }, "apps/pdf": { hono: "the server" } },
+      runtime: {
+        npm: { "apps/pdf": { "playwright-core": "renders PDFs" } },
+        cargo: { "crates/render": { chromiumoxide: "renders slides" } },
+      },
+    },
+  });
+  assert.deepEqual(guard(root, "deps"), { status: 0, stdout: OK, stderr: "" });
+});
+
+test("runtime can't allow a dev dependency, which is a check, not product", () => {
+  const root = project({
+    "package.json": { devDependencies: { "playwright-core": "1" } },
+    "crates/a/Cargo.toml": '[package]\nname = "a"\n\n[dev-dependencies]\nchromiumoxide = "0.7"\n',
+    "dependencies.json": {
+      runtime: {
+        npm: { ".": { "playwright-core": "renders PDFs" } },
+        cargo: { "crates/a": { chromiumoxide: "renders slides" } },
+      },
+    },
+  });
+  assert.deepEqual(guard(root, "deps"), {
+    status: 1,
+    stdout: "",
+    stderr: [
+      "wow-guard deps: crates/a/Cargo.toml: chromiumoxide is under runtime, so make it a product dependency (wow 2)",
+      "wow-guard deps: package.json: playwright-core is under runtime, so make it a product dependency (wow 2)",
+      "",
+    ].join("\n"),
+  });
+});
+
+test("runtime can't allow a test runner or WebDriver", () => {
+  const root = project({
+    "package.json": { dependencies: { "@playwright/test": "1", "selenium-webdriver": "4" } },
+    "dependencies.json": {
+      runtime: {
+        npm: { ".": { "@playwright/test": "renders PDFs", "selenium-webdriver": "scrapes" } },
+      },
+    },
+  });
+  assert.deepEqual(guard(root, "deps"), {
+    status: 1,
+    stdout: "",
+    stderr: [
+      "wow-guard deps: package.json: @playwright/test only drives browser tests, so runtime can't allow it (wow 2)",
+      "wow-guard deps: package.json: selenium-webdriver only drives browser tests, so runtime can't allow it (wow 2)",
+      "",
+    ].join("\n"),
+  });
+});
+
+test("a runtime entry needs a reason, a browser and a manifest that uses it", () => {
+  const root = project({
+    "package.json": {},
+    "apps/pdf/package.json": { dependencies: { "puppeteer-core": "24", react: "19" } },
+    "dependencies.json": {
+      npm: { ".": {} },
+      runtime: {
+        npm: {
+          "apps/pdf": { "puppeteer-core": " ", "playwright-core": "renders PDFs", react: "the UI" },
+          "apps/old": { "puppeteer-core": "renders PDFs" },
+        },
+      },
+    },
+  });
+  assert.deepEqual(guard(root, "deps"), {
+    status: 1,
+    stdout: "",
+    stderr: [
+      "wow-guard deps: dependencies.json: runtime apps/pdf lists puppeteer-core without a reason",
+      "wow-guard deps: dependencies.json: runtime apps/pdf lists playwright-core, which apps/pdf/package.json doesn't use",
+      "wow-guard deps: dependencies.json: runtime apps/pdf lists react, which drives no browser; give its reason under npm",
+      'wow-guard deps: dependencies.json: runtime npm "apps/old" has no manifest',
+      "",
+    ].join("\n"),
+  });
+});
+
 test("every dependency is recorded with a reason, and the record can't go stale", () => {
   const root = project({
     "package.json": { dependencies: { react: "19", zod: "4", vite: "8" } },

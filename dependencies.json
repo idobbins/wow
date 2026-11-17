@@ -1,0 +1,7 @@
+{
+  "npm": {
+    ".": {
+      "oxlint": "the tests lint fixtures with it, and wow/oxlint and wow-ratchet run on it"
+    }
+  }
+}

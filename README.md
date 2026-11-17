@@ -35,8 +35,10 @@ Keep the fewest checks that give high confidence, and keep the whole loop to abo
 
 **Why:** Each extra check feels like more safety. It costs time on every run until the loop is slow enough to skip. Browser automation is the worst case: it's heavy and flaky, it crashes the machines it runs on, and it stands in for logic that should have been testable (wow 1).
 
-- **The browser ban is hard.** No Playwright, Puppeteer, WebDriver, Cypress or any other browser automation, in any project, on any machine. A guard refuses the packages. Don't keep one "just in case".
-- **About a minute.** The whole loop takes about a minute, and five minutes is the hard maximum. Adding seconds is fine. Adding minutes needs the operator.
+- **The browser ban is hard.** No check drives a browser: no Playwright, Puppeteer, WebDriver, Cypress or any other browser automation, in any project, on any machine. A guard refuses the packages. Don't keep one "just in case".
+- **Product code is not a check.** A feature that runs a headless browser, such as a PDF renderer, may depend on one, with its reason under `runtime` in `dependencies.json`.
+- **About a minute.** The whole loop takes about a minute, and five minutes is the hard maximum. Adding seconds is fine. Adding minutes needs the operator. A check too slow for that runs once per batch, after it lands on main, never per change. A red one is bisected (wow 13).
+- **The ship path has a budget too.** A unit reaches main about 15 minutes, at p50, after its proof passes. The wait counts, not just the run.
 - **Earn the place.** A check goes in only if it catches a break nothing else catches. Delete checks that only repeat others.
 - **Remove crutches.** When a tool is heavy or flaky, remove it. Then ask how to keep the same confidence without it, not where it can stay.
 
@@ -49,7 +51,7 @@ Every claim needs a check that fails when the thing breaks. Break it on purpose,
 **Why:** A check passes when the code works, and also when the check tests nothing. Only a planted break tells you which. "It compiles", "the tests pass" and "it was reviewed" are not proof.
 
 - Name the check that fails for each behavior, then plant exactly that break.
-- Report each claim with the command and its output, not a summary. For a UI change, also attach a before and an after screenshot, taken once with your own screenshot tool. That's evidence, not a test, so it adds no browser script or dependency (wow 2).
+- Report each claim with the command and its output, not a summary. For a UI change, also attach a before and an after screenshot, taken once with your own screenshot tool. A layout read taken the same way, such as an element's box at a given width, counts as one. That's evidence, not a test, so it adds no browser script, dependency or test setup to the repo (wow 2).
 - Briefs list the breaks to plant. After work lands, rerun its proof with a break planted before calling it done.
 
 ### 4. Outcome first
@@ -62,7 +64,8 @@ Write down what the user ends up with, then check that. Don't check what the cod
 
 - Include what happens outside the app: the email, the invite, the money moved, what another person sees.
 - Compare the outcome with what the check asserts. Report an unmet outcome as a product gap, not an untested path.
-- Check outcomes at the closest seam that runs without a browser (wow 1, wow 2).
+- Check outcomes at the closest seam that runs without a browser (wow 1, wow 2). Where an outcome crosses an outside service, such as payments, sign-in or a render service, prove our side with their recorded fixtures: their webhook replayed into our handler, our request checked against their schema, our routes against the deployed config. Never call the live service from a check.
+- Production is the last check. After each deploy, and each flag or config change users see, fetch the key pages and every asset they name over HTTP, then compare the release's client errors with the last release's for 15 minutes. Report a rise as red (wow 11); rolling back stays the operator's call. Real users' browsers are the end-to-end check, so watch them.
 
 ## Building
 
@@ -150,8 +153,8 @@ Enforce the rule with something that fails, not with more prose.
 **Why:** Writing the rule down again feels like fixing it. Written rules drift and get skipped. A lint holds every time, for every agent, and points to where the rule was broken.
 
 - The second time a rule has to be said, make it a lint, guard or check.
-- Examples: no em dashes in product text, no browser automation packages (wow 2), and no dependency without a recorded reason (wow 7).
-- Every guard has a planted break that proves it fires (wow 3).
+- Examples: no em dashes in product text, no browser automation in checks (wow 2), and no dependency without a recorded reason (wow 7).
+- Every guard has a planted break that proves it fires (wow 3), and runs in the loop of every project that follows the rule. A project that can't run one yet says why in its `AGENTS.md`, naming the node that ends the exception (wow 13).
 - Encode rules, not process (wow 6).
 
 ## Working with the operator
@@ -168,7 +171,8 @@ Act on reversible work without asking. When confidence or the machines are at ri
 - **The operator holds the gates:** money, other changes to running services, deletes that reach production, resuming after a stop, and machine-level settings. Once the loop passes with proof attached (wow 3), push to main yourself; the pipeline deploys it. When the operator says "I'll tell you", wait.
 - **Stop the line.** When the loop can't be trusted, no new features ship until it's fixed.
 - **Keep a sustainable pace.** Machines are shared, so check the load before launching and treat caps as limits. Stop processes only by PID, and don't trust timings taken under load. A crash is a process bug: find out why before resuming.
-- **Report red right away.** Report a failure in production the moment you see it, without being asked.
+- **Earn the cap.** Raise the cap on units in flight only while main was busy under 60% of the last working window. Past that, batch bigger or make the loop faster first (wow 13).
+- **Report red right away.** Report a failure in production the moment you see it, without being asked. A scheduled check that goes red, such as a nightly or a watch, gets a node that day (wow 13). A check red three runs in a row is fixed or deleted, never left.
 - **Secrets go through a secure prompt,** never chat. Never print them.
 
 ### 12. One record, asked well
@@ -197,8 +201,9 @@ Each repo keeps its work as a graph in `.wow/dag.jsonl`, and its goal is done: e
 - **Keep it current.** Change a node in the commit that changes its status. Mark it done in the commit that lands the work, with the proof's command and output (wow 3).
 - **Read, then propose.** Make a blocker named only in text a dep. Changing deps you didn't add waits for the operator's yes.
 - **Ready means** todo, every dep done, a clear outcome (wow 4), known files, a planted break (wow 3), no open decision and nothing external. A node missing one of these becomes a question, ranked by what its answer unblocks (wow 12). Plan nothing else.
-- **Waves within the cap.** Count work in flight against the cap (wow 11), and share no files with it. Start the longest piece on each goal's critical path first. Everything ships through one queue, usually the bottleneck.
+- **Waves build, batches ship.** Count work in flight against the cap (wow 11), and share no files with it. Start the longest piece on each goal's critical path first. Everything reaches main through one queue, usually the bottleneck, and its wait grows as 1/(1 - busy). Ship in batches: when one lands, the next takes everything waiting that shares no files and proves it once. A red batch is bisected.
 - **Re-plan on events:** a unit lands or fails, an answer arrives, work comes in. Rerun the ready query. A failed unit goes back to building, never ahead.
+- **One speed node.** Each graph keeps one node that owns how fast work reaches main, measured from the repo's logs: ready to main at p50 and p90, the loop at p50, the share of red batches, and how busy main is. It's done, with the latest numbers as proof, while the ship path keeps its budget (wow 2) and main stays under its busy limit (wow 11). When either breaks, it goes back to todo.
 
 ## Toolchain
 
@@ -217,8 +222,8 @@ For JavaScript and TypeScript, use the [Oxc](https://oxc.rs) tools: one fast too
 
 The rules a check can hold (wow 10) ship from this repo, so projects install them instead of copying. Pin a commit as a dev dependency: `"wow": "github:idobbins/wow#<sha>"`. Config is one `wow` key in the root `package.json`.
 
-- **Guards.** `pnpm wow-guard all` runs each guard from the project root, or name one: `deps`, `dashes` or `dag`.
-- **deps.** Refuses browser automation packages in any manifest, with no opt-out (wow 2). Every other dependency needs a reason in `dependencies.json`: `{ "npm": { "apps/web": { "react": "the UI" } }, "cargo": { ... } }`, keyed by the manifest's folder (wow 7).
+- **Guards.** `pnpm wow-guard all` runs each guard from the project root, and belongs in the loop (wow 10). Or name one: `deps`, `dashes` or `dag`.
+- **deps.** Every dependency needs a reason in `dependencies.json`: `{ "npm": { "apps/web": { "react": "the UI" } }, "cargo": { ... } }`, keyed by the manifest's folder (wow 7). Browser automation fails in any manifest, whatever its reason (wow 2), except a headless browser the product runs: a product dependency, not a dev one, with its reason under `"runtime": { "npm": { "apps/pdf": { "playwright-core": "renders PDFs" } } }` in place of the plain entry. Test runners and WebDriver never pass.
 - **dashes.** Fails on an em dash in shipped code, outside comments: `"dashes": { "roots": ["apps/web/src"], "ignore": ["**/*.test.ts"] }`.
 - **dag.** Checks `.wow/dag.jsonl` (wow 13): one node per line with known fields and status, ids unique and sorted, every dep a node, and no cycle. `all` skips a project that has no file yet; `wow-guard dag` requires one.
 - **Lint.** Add `"jsPlugins": ["wow/oxlint"]` to `.oxlintrc.json` and turn rules on by name, as `"wow/no-silent-catch": "error"`. The rules: `require-disable-reason`, `no-low-value-comments`, `no-silent-catch`, `no-double-cast`, and for Convex, `no-catch-around-own-writes` and `no-any-returns`. The two catch rules take `{ "throwers": [...] }`, the calls that rethrow.
