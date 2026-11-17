@@ -1,0 +1,3 @@
+{"id":"0001","created":"2026-11-17T19:50:00Z","updated":"2026-11-17T19:50:00Z","title":"A project runs wow-guard all in its loop and goes red on a broken record","status":"covered","scenarios":["test/wow.test.mjs","test/dag.test.mjs","test/operator.test.mjs","test/flows.test.mjs","test/deps.test.mjs","test/dashes.test.mjs"]}
+{"id":"0002","created":"2026-11-17T19:50:00Z","updated":"2026-11-17T19:50:00Z","title":"A project loads wow/oxlint and each rule fails on its planted break","status":"covered","scenarios":["test/oxlint.test.mjs"]}
+{"id":"0003","created":"2026-11-17T19:50:00Z","updated":"2026-11-17T19:50:00Z","title":"A project seeds a rule with wow-ratchet and holds every count","status":"covered","scenarios":["test/ratchet.test.mjs"]}

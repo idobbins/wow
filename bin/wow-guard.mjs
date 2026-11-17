@@ -1,17 +1,18 @@
 #!/usr/bin/env node
-// `wow-guard deps|dashes|dag|needs-isaac|all`, or `wow-guard answer <path>`, run from the project
-// root. Config: package.json's "wow" key.
+// `wow-guard deps|dashes|dag|needs-isaac|core-flows|all`, or `wow-guard answer <path>`, run from
+// the project root. Config: package.json's "wow" key.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { dag, DAG, skipWithout } from "../guards/dag.mjs";
 import { dashes } from "../guards/dashes.mjs";
 import { deps } from "../guards/deps.mjs";
+import { flows, FLOWS } from "../guards/flows.mjs";
 import { answer, ledger, LEDGER } from "../guards/operator.mjs";
 
 const GUARDS = {
   deps: { run: (root) => deps(root), ok: "every dependency is in dependencies.json with a reason" },
   dashes: { run: (root, wow) => dashes(root, wow.dashes), ok: "the product shows no em dash" },
-  // `all` skips a project with no DAG or ledger yet, so pinning a newer wow doesn't fail (wow 9).
+  // `all` skips a project with no DAG, ledger or flow list yet, so pinning a newer wow doesn't fail (wow 9).
   dag: {
     run: (root) => dag(root),
     skip: skipWithout(DAG, "dag"),
@@ -21,6 +22,11 @@ const GUARDS = {
     run: (root) => ledger(root),
     skip: skipWithout(LEDGER, "needs-isaac"),
     ok: "every item is sound, and none holds a secret",
+  },
+  "core-flows": {
+    run: (root) => flows(root),
+    skip: skipWithout(FLOWS, "core-flows"),
+    ok: "every flow is sound, and every gap is a node still open",
   },
 };
 // Not in `all`: it checks one answer file, which lives outside the repo.

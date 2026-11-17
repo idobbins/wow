@@ -183,28 +183,98 @@ const isVCall = (node, name) =>
   node.callee.object.type === "Identifier" &&
   node.callee.object.name === "v" &&
   node.callee.property.name === name;
+const keyOf = (property) =>
+  property.key.type === "Identifier" ? property.key.name : property.key.value;
+const isReturns = (node) => node?.type === "Property" && keyOf(node) === "returns";
+// What no-any-returns reports: v.any() as the returns validator, or as one arm of its union.
+const isAnyReturn = (node) =>
+  isReturns(node.parent) || (isVCall(node.parent, "union") && isReturns(node.parent.parent));
+
+// Convex's own builders. A project's wrappers of them, such as customQuery's, go in `builders`.
+const CONVEX_BUILDERS = new Set([
+  "query",
+  "mutation",
+  "action",
+  "internalQuery",
+  "internalMutation",
+  "internalAction",
+]);
 
 export const noAnyReturns = {
   meta: {
     type: "problem",
-    docs: { description: "A Convex function's `returns` is a real validator, not v.any()." },
+    docs: {
+      description:
+        "Each Convex function comes from a typed builder and declares `returns`, a real validator.",
+    },
+    schema: [{ type: "object", properties: { builders: THROWERS }, additionalProperties: false }],
     messages: {
       any:
         "`returns: v.any()` leaves callers to cast the result to a type nobody checks. Write the " +
         "validator (or reuse the table's), so the return is checked and typed.",
+      missing:
+        "This Convex function declares no `returns`, so its result goes unchecked and callers " +
+        "type it by hand. Declare the validator, so the type check fails when the handler drifts.",
+      generic:
+        "`{{name}}` skips the generated data model, so nothing types the tables it reads. Import " +
+        "the builder from convex/_generated/server, or the project's wrapper of it.",
     },
   },
   create(context) {
+    // Builders imported from Convex's generated server, under whatever local name.
+    const builders = new Set(context.options[0]?.builders ?? []);
     return {
+      ImportDeclaration(node) {
+        if (node.source.value === "convex/server")
+          for (const spec of node.specifiers) {
+            const name = spec.type === "ImportSpecifier" ? spec.imported.name : "";
+            if (name.endsWith("Generic") && CONVEX_BUILDERS.has(name.slice(0, -"Generic".length)))
+              context.report({ node: spec, messageId: "generic", data: { name } });
+          }
+        if (!/(^|\/)_generated\/server(\.[cm]?[jt]s)?$/.test(node.source.value)) return;
+        for (const spec of node.specifiers)
+          if (spec.type === "ImportSpecifier" && CONVEX_BUILDERS.has(spec.imported.name))
+            builders.add(spec.local.name);
+      },
+      CallExpression(node) {
+        if (node.callee.type !== "Identifier" || !builders.has(node.callee.name)) return;
+        const [definition] = node.arguments;
+        const declares =
+          definition?.type === "ObjectExpression" &&
+          definition.properties.some((p) => p.type === "SpreadElement" || isReturns(p));
+        if (isFunction(definition) || (definition?.type === "ObjectExpression" && !declares))
+          context.report({ node: node.callee, messageId: "missing" });
+      },
       Property(node) {
-        const key = node.key.type === "Identifier" ? node.key.name : node.key.value;
-        if (key !== "returns") return;
+        if (!isReturns(node)) return;
         const value = node.value;
         if (
           isVCall(value, "any") ||
           (isVCall(value, "union") && value.arguments.some((a) => isVCall(a, "any")))
         )
           context.report({ node: value, messageId: "any" });
+      },
+    };
+  },
+};
+
+export const noVAny = {
+  meta: {
+    type: "problem",
+    docs: {
+      description: "No v.any() in a Convex validator; no-any-returns owns the `returns` slot.",
+    },
+    messages: {
+      any:
+        "`v.any()` accepts anything, so the type derived from it is `any` and nothing is checked. " +
+        "Write the validator, or reuse the table's.",
+    },
+  },
+  create(context) {
+    return {
+      CallExpression(node) {
+        if (isVCall(node, "any") && !isAnyReturn(node))
+          context.report({ node, messageId: "any" });
       },
     };
   },

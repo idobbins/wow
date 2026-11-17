@@ -13,6 +13,7 @@ test("wow passes every guard it ships (wow 10)", () => {
       "wow-guard dashes: the product shows no em dash",
       "wow-guard dag: every node is sound, every dep is a node, and no cycle",
       "wow-guard needs-isaac: every item is sound, and none holds a secret",
+      "wow-guard core-flows: every flow is sound, and every gap is a node still open",
       "",
     ].join("\n"),
     stderr: "",

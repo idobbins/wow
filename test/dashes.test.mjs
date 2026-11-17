@@ -64,6 +64,7 @@ test("all runs every guard and fails if any fails", () => {
       "wow-guard deps: every dependency is in dependencies.json with a reason",
       "wow-guard dag: no .wow/dag.jsonl yet, skipped; `wow-guard dag` requires it",
       "wow-guard needs-isaac: no .wow/needs-isaac.jsonl yet, skipped; `wow-guard needs-isaac` requires it",
+      "wow-guard core-flows: no .wow/core-flows.jsonl yet, skipped; `wow-guard core-flows` requires it",
       "",
     ].join("\n"),
     stderr: "wow-guard dashes: src/a.ts:1: shows an em dash, which is banned\n",
@@ -71,6 +72,6 @@ test("all runs every guard and fails if any fails", () => {
   assert.deepEqual(guard(root, "nope"), {
     status: 2,
     stdout: "",
-    stderr: "usage: wow-guard deps|dashes|dag|needs-isaac|all, or wow-guard answer <path>\n",
+    stderr: "usage: wow-guard deps|dashes|dag|needs-isaac|core-flows|all, or wow-guard answer <path>\n",
   });
 });

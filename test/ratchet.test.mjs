@@ -157,3 +157,34 @@ test("concurrency 1, the default, never runs two oxlints at once", () => {
       "wow-ratchet: wow.ratchet.concurrency is how many oxlint runs at once: a whole number, 1 or more\n",
   });
 });
+
+test("wow/no-v-any seeds, holds, and fails on one more v.any()", () => {
+  const anys = (n) => `export const t = v.object({\n${"  x: v.any(),\n".repeat(n)}});\n`;
+  const root = project({
+    "package.json": PKG,
+    ".oxlintrc.json": {
+      categories: { correctness: "off" },
+      jsPlugins: ["wow/oxlint"],
+      rules: { "wow/no-v-any": "error" },
+    },
+    "convex/schema.ts": anys(2),
+    "sub/b.ts": anys(1),
+  });
+  assert.deepEqual(ratchet(root, "--seed=wow/no-v-any"), {
+    status: 0,
+    stdout: "wow-ratchet: wow/no-v-any: 3 findings in 2 files.\n",
+    stderr: "",
+  });
+  assert.equal(
+    readFileSync(join(root, "lint/grandfathered/wow-no-v-any.json"), "utf8"),
+    `${JSON.stringify({ rule: "wow/no-v-any", counts: { "convex/schema.ts": 2, "sub/b.ts": 1 } }, null, 2)}\n`,
+  );
+  assert.deepEqual(ratchet(root), { status: 0, stdout: "", stderr: "" });
+  writeFileSync(join(root, "convex/schema.ts"), anys(3));
+  const { status, stderr } = ratchet(root);
+  assert.equal(status, 1);
+  assert.match(
+    stderr,
+    /wow-ratchet: convex\/schema.ts has 3 wow\/no-v-any, over its budget of 2 \(lint\/grandfathered\/\)/,
+  );
+});

@@ -152,6 +152,50 @@ const CASES = [
       "export const g = query({ returns: v.union(v.string(), v.null()), handler: () => 1 });",
     ),
   },
+  {
+    rule: "no-any-returns",
+    options: { builders: ["authedQuery"] },
+    file: "convex/a.ts",
+    fails: lines(
+      'import { query as q, internalAction } from "./_generated/server";',
+      'import { mutationGeneric } from "convex/server";',
+      "export const f = q({ args: {}, handler: () => 1 });",
+      "export const g = internalAction(async () => 1);",
+      "export const h = authedQuery({ handler: () => 1 });",
+    ),
+    found: [
+      "2:10 `mutationGeneric` skips the generated data model, so nothing types the tables it reads. Import the builder from convex/_generated/server, or the project's wrapper of it.",
+      ...["3:18", "4:18", "5:18"].map(
+        (at) =>
+          `${at} This Convex function declares no \`returns\`, so its result goes unchecked and callers type it by hand. Declare the validator, so the type check fails when the handler drifts.`,
+      ),
+    ],
+    passes: lines(
+      'import { query, internalAction } from "./_generated/server";',
+      'import { v } from "convex/values";',
+      "export const f = query({ args: {}, returns: v.number(), handler: () => 1 });",
+      "export const g = internalAction({ ...shared, handler: () => 1 });",
+      "export const h = other({ handler: () => 1 });",
+    ),
+  },
+  {
+    rule: "no-v-any",
+    file: "convex/schema.ts",
+    fails: lines(
+      "export const a = defineTable({ data: v.any() });",
+      "export const b = v.object({ x: v.optional(v.union(v.string(), v.any())) });",
+    ),
+    found: ["1:38", "2:63"].map(
+      (at) =>
+        `${at} \`v.any()\` accepts anything, so the type derived from it is \`any\` and nothing is checked. Write the validator, or reuse the table's.`,
+    ),
+    passes: lines(
+      "export const a = defineTable({ data: v.object({ n: v.number() }) });",
+      "export const f = query({ returns: v.any(), handler: () => 1 });",
+      "export const g = query({ returns: v.union(v.null(), v.any()), handler: () => 1 });",
+      "export const h = any();",
+    ),
+  },
 ];
 
 for (const { rule, options, file, fails, found, passes } of CASES) {

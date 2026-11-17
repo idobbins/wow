@@ -120,6 +120,7 @@ test("dag requires the file; all skips a project that has none yet", () => {
       "wow-guard dashes: the product shows no em dash",
       "wow-guard dag: no .wow/dag.jsonl yet, skipped; `wow-guard dag` requires it",
       "wow-guard needs-isaac: no .wow/needs-isaac.jsonl yet, skipped; `wow-guard needs-isaac` requires it",
+      "wow-guard core-flows: no .wow/core-flows.jsonl yet, skipped; `wow-guard core-flows` requires it",
       "",
     ].join("\n"),
     stderr: "",
