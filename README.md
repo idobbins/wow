@@ -185,6 +185,7 @@ Write every decision down in one place, and put every question so it can be answ
 
 - **One record.** Decisions go in the work graph, on the node they decide (wow 13), and briefs cite them by node id. Backfill any decision made only in conversation. Moving the record somewhere else is itself a decision.
 - **Dense, numbered and recommended.** List the quickest calls first, each with a recommendation.
+- **Reviews are HTML.** Anything the operator reviews, such as a draft, a wording list or a report, is one self-contained HTML file (inline styles, no external scripts), not markdown.
 - **"I don't know" is an answer.** Take the recommendation, or explain the item better if it matters.
 - **Never ask twice.** If it's reversible, make the call and offer a veto.
 - **Report in numbers:** what landed, what's running, and what's waiting on whom.
