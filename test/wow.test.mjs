@@ -12,6 +12,7 @@ test("wow passes every guard it ships (wow 10)", () => {
       "wow-guard deps: every dependency is in dependencies.json with a reason",
       "wow-guard dashes: the product shows no em dash",
       "wow-guard dag: every node is sound, every dep is a node, and no cycle",
+      "wow-guard needs-isaac: every item is sound, and none holds a secret",
       "",
     ].join("\n"),
     stderr: "",

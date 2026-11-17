@@ -12,7 +12,7 @@ Each repo keeps its work in `.wow/dag.jsonl`: one JSON node per line, each a uni
 | `deps` | yes | Ids this unit truly waits on. `[]` for none. Ship order is not a dep. |
 | `files` | to be ready | Paths it touches. A folder covers everything under it. |
 | `proof` | to be ready | The planted break that proves it (wow 3). Once done, the evidence: the command and its output, or the commit. |
-| `waiting` | when blocked | What it waits on outside the graph: an open question for the operator, or another party. |
+| `waiting` | when blocked | What it waits on outside the graph: an open item on [the operator's ledger](operator.md#the-ledger), or another party. |
 | `decisions` | no | The operator's answers, verbatim: `[{ "by": "operator", "at": "...", "text": "..." }]`. Append only. |
 | `created`, `updated` | yes | UTC ISO 8601 to the second, `2026-11-16T22:04:00Z`, as jq's `now \| todate` writes it, so times sort as text. |
 

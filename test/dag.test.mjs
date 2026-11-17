@@ -119,6 +119,7 @@ test("dag requires the file; all skips a project that has none yet", () => {
       "wow-guard deps: every dependency is in dependencies.json with a reason",
       "wow-guard dashes: the product shows no em dash",
       "wow-guard dag: no .wow/dag.jsonl yet, skipped; `wow-guard dag` requires it",
+      "wow-guard needs-isaac: no .wow/needs-isaac.jsonl yet, skipped; `wow-guard needs-isaac` requires it",
       "",
     ].join("\n"),
     stderr: "",

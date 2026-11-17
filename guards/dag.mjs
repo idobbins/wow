@@ -8,19 +8,22 @@ const DOC = "https://github.com/idobbins/wow/blob/main/docs/dag.md";
 
 // UTC to the second, as jq's `now | todate` writes it, so times sort as text.
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
-const text = (v) => typeof v === "string" && v.trim() !== "";
-const texts = (v) => Array.isArray(v) && v.every(text);
+export const text = (v) => typeof v === "string" && v.trim() !== "";
+export const texts = (v) => Array.isArray(v) && v.every(text);
 const STATUSES = ["todo", "doing", "blocked", "done"];
 const time = (v) => typeof v === "string" && ISO.test(v) && !Number.isNaN(Date.parse(v));
 const TIME = "a UTC ISO 8601 time, like 2026-11-16T22:04:00Z";
+const ID = [
+  true,
+  (v) => typeof v === "string" && /^[0-9a-z-]+$/.test(v),
+  "lowercase letters, digits and hyphens",
+];
+// Every .wow record has these: an id that never changes, and when it was made and last changed.
+export const RECORD = { id: ID, created: [true, time, TIME], updated: [true, time, TIME] };
 
 // Each field: whether a node must have it, the test its value passes, and what the test asks for.
 const FIELDS = {
-  id: [
-    true,
-    (v) => typeof v === "string" && /^[0-9a-z-]+$/.test(v),
-    "lowercase letters, digits and hyphens",
-  ],
+  id: ID,
   title: [true, text, "non-empty text"],
   status: [true, (v) => STATUSES.includes(v), "todo, doing, blocked or done"],
   deps: [true, texts, "a list of ids"],
@@ -32,50 +35,65 @@ const FIELDS = {
     (v) => Array.isArray(v) && v.every((d) => text(d?.by) && time(d?.at) && text(d?.text)),
     `a list of { "by", "at", "text" }, with "at" ${TIME}`,
   ],
-  created: [true, time, TIME],
-  updated: [true, time, TIME],
+  ...RECORD,
 };
 
-/** Problems with `source`, the text of the DAG file; empty when it's sound. */
-export function dagProblems(source) {
+/**
+ * Reads `source`, the text of `file`: one JSON object per line, sorted by unique id, each field
+ * as `fields` says. `check(record, problem)` adds the file's own rules. Returns its problems and
+ * its records by id, each with its line and whether every field passed.
+ */
+export function readRecords(file, source, fields, check) {
   const problems = [];
-  const nodes = new Map();
+  const records = new Map();
   let previous = null;
   const lines = source.split("\n");
   if (lines.at(-1) === "") lines.pop();
   lines.forEach((line, i) => {
-    const at = `${DAG}:${i + 1}:`;
-    let node;
+    const at = `${file}:${i + 1}:`;
+    let record;
     try {
-      node = JSON.parse(line);
+      record = JSON.parse(line);
     } catch {}
-    if (typeof node !== "object" || node === null || Array.isArray(node))
+    if (typeof record !== "object" || record === null || Array.isArray(record))
       return problems.push(`${at} isn't one JSON object`);
     let sound = true;
-    for (const [field, [required, ok, shape]] of Object.entries(FIELDS)) {
-      if (!(field in node)) {
+    for (const [field, [required, ok, shape]] of Object.entries(fields)) {
+      if (!(field in record)) {
         if (required) problems.push(`${at} missing "${field}"`);
         sound &&= !required;
-      } else if (!ok(node[field])) {
+      } else if (!ok(record[field])) {
         problems.push(`${at} "${field}" must be ${shape}`);
         sound = false;
       }
     }
-    for (const field of Object.keys(node))
-      if (!(field in FIELDS)) problems.push(`${at} unknown field "${field}"`);
-    if (node.status === "done" && !("proof" in node))
-      problems.push(`${at} a done node needs "proof"`);
+    for (const field of Object.keys(record))
+      if (!(field in fields)) problems.push(`${at} unknown field "${field}"`);
+    check(record, (problem) => problems.push(`${at} ${problem}`));
+    if (!ID[1](record.id)) return;
+    if (records.has(record.id))
+      return problems.push(
+        `${at} id ${record.id} is on line ${records.get(record.id).line} already`,
+      );
+    if (previous !== null && record.id < previous)
+      problems.push(`${at} id ${record.id} comes after ${previous}; sort the lines by id`);
+    previous = record.id;
+    records.set(record.id, { line: i + 1, record, sound });
+  });
+  return { problems, records };
+}
+
+/** Problems with `source`, the text of the DAG file; empty when it's sound. */
+export function dagProblems(source) {
+  const { problems, records } = readRecords(DAG, source, FIELDS, (node, problem) => {
+    if (node.status === "done" && !("proof" in node)) problem(`a done node needs "proof"`);
     if (node.status === "blocked" && !("waiting" in node))
-      problems.push(`${at} a blocked node needs "waiting"`);
-    if (!FIELDS.id[1](node.id)) return;
-    if (nodes.has(node.id))
-      return problems.push(`${at} id ${node.id} is on line ${nodes.get(node.id).line} already`);
-    if (previous !== null && node.id < previous)
-      problems.push(`${at} id ${node.id} comes after ${previous}; sort the lines by id`);
-    previous = node.id;
-    nodes.set(node.id, { line: i + 1, deps: sound ? node.deps : [] });
+      problem(`a blocked node needs "waiting"`);
   });
 
+  const nodes = new Map();
+  for (const [id, { line, record, sound }] of records)
+    nodes.set(id, { line, deps: sound ? record.deps : [] });
   const graph = new Map();
   for (const [id, { line, deps }] of nodes) {
     for (const dep of deps)
@@ -102,9 +120,11 @@ export function dagProblems(source) {
   return problems;
 }
 
-/** Why `wow-guard all` skips the project at `root`, or null when it has a DAG to check. */
-export const dagSkip = (root) =>
-  existsSync(join(root, DAG)) ? null : `no ${DAG} yet, skipped; \`wow-guard dag\` requires it`;
+/** `wow-guard all` skips a project without `file` yet: why, or null when it has one to check. */
+export const skipWithout = (file, guard) => (root) =>
+  existsSync(join(root, file))
+    ? null
+    : `no ${file} yet, skipped; \`wow-guard ${guard}\` requires it`;
 
 /** Problems for the project at `root`; empty when its DAG is sound. */
 export function dag(root) {

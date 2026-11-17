@@ -168,27 +168,29 @@ Act on reversible work without asking. When confidence or the machines are at ri
 **Why:** Pushing on while the loop is broken feels like progress. It ships work nobody can vouch for, and it turns a fast night into a lost morning.
 
 - **Do it, then report it.** Don't ask "should I do X?" about reversible work. Clear your own blockers, and fix causes instead of routing around them.
-- **The operator holds the gates:** money, other changes to running services, deletes that reach production, resuming after a stop, and machine-level settings. Once the loop passes with proof attached (wow 3), push to main yourself; the pipeline deploys it. When the operator says "I'll tell you", wait.
+- **The operator holds the gates:** money, secrets, one-way product decisions, sends outside the team, other changes to running services, deletes that reach production, resuming after a stop, and machine-level settings. These, and only these, go on the ledger (wow 12). Once the loop passes with proof attached (wow 3), push to main yourself; the pipeline deploys it. When the operator says "I'll tell you", wait.
 - **Stop the line.** When the loop can't be trusted, no new features ship until it's fixed.
 - **Keep a sustainable pace.** Machines are shared, so check the load before launching and treat caps as limits. Stop processes only by PID, and don't trust timings taken under load. A crash is a process bug: find out why before resuming.
 - **Earn the cap.** Raise the cap on units in flight only while main was busy under 60% of the last working window. Past that, batch bigger or make the loop faster first (wow 13).
 - **Report red right away.** Report a failure in production the moment you see it, without being asked. A scheduled check that goes red, such as a nightly or a watch, gets a node that day (wow 13). A check red three runs in a row is fixed or deleted, never left.
-- **Secrets go through a secure prompt,** never chat. Never print them.
+- **Secrets go through a secure prompt,** never chat or a record. Never print them.
 
 ### 12. One record, asked well
 
-*When:* a decision is needed or has been made.
+*When:* a decision is needed or has been made, or anything goes to the operator.
 
 Write every decision down in one place, and put every question so it can be answered in one line.
 
 **Why:** Deciding in conversation feels done. Those decisions get lost between threads and agents, and a question without a recommendation hands the analysis back to the operator.
 
 - **One record.** Decisions go in the work graph, on the node they decide (wow 13), and briefs cite them by node id. Backfill any decision made only in conversation. Moving the record somewhere else is itself a decision.
+- **One ledger of what's open.** What waits on the operator's gates (wow 11) goes in `.wow/needs-isaac.jsonl`, one item per line, with a recommendation. It never holds the decision: the answer goes on the node it decides, and the item closes naming that node.
+- **Answer in a file.** A request from the operator's bot gets a short answer file that leads with the answer and answers or defers every question, and the chat reply is one line naming it. Only a turn that failed, changed the ledger or went live wakes the operator, marked by its last line ([formats, paths and the digest](docs/operator.md)).
 - **Dense, numbered and recommended.** List the quickest calls first, each with a recommendation.
 - **Reviews are HTML.** Anything the operator reviews, such as a draft, a wording list or a report, is one self-contained HTML file (inline styles, no external scripts), not markdown.
 - **"I don't know" is an answer.** Take the recommendation, or explain the item better if it matters.
 - **Never ask twice.** If it's reversible, make the call and offer a veto.
-- **Report in numbers:** what landed, what's running, and what's waiting on whom.
+- **Report in numbers:** what landed, what's running, and what's waiting on whom, in a daily digest the operator's bot reads.
 
 ### 13. Plan from the graph
 
@@ -223,10 +225,11 @@ For JavaScript and TypeScript, use the [Oxc](https://oxc.rs) tools: one fast too
 
 The rules a check can hold (wow 10) ship from this repo, so projects install them instead of copying. Pin a commit as a dev dependency: `"wow": "github:idobbins/wow#<sha>"`. Config is one `wow` key in the root `package.json`.
 
-- **Guards.** `pnpm wow-guard all` runs each guard from the project root, and belongs in the loop (wow 10). Or name one: `deps`, `dashes` or `dag`.
+- **Guards.** `pnpm wow-guard all` runs each guard from the project root, and belongs in the loop (wow 10). Or name one: `deps`, `dashes`, `dag` or `needs-isaac`.
 - **deps.** Every dependency needs a reason in `dependencies.json`: `{ "npm": { "apps/web": { "react": "the UI" } }, "cargo": { ... } }`, keyed by the manifest's folder (wow 7). Browser automation fails in any manifest, whatever its reason (wow 2), except a headless browser the product runs: a product dependency, not a dev one, with its reason under `"runtime": { "npm": { "apps/pdf": { "playwright-core": "renders PDFs" } } }` in place of the plain entry. Test runners and WebDriver never pass.
 - **dashes.** Fails on an em dash in shipped code, outside comments: `"dashes": { "roots": ["apps/web/src"], "ignore": ["**/*.test.ts"] }`.
 - **dag.** Checks `.wow/dag.jsonl` (wow 13): one node per line with known fields and status, ids unique and sorted, every dep a node, and no cycle. `all` skips a project that has no file yet; `wow-guard dag` requires one.
+- **needs-isaac.** Checks `.wow/needs-isaac.jsonl` (wow 12) the same way, plus each item's kind and status, closing, and no value shaped like a secret. `wow-guard answer <path>` checks one answer file, outside `all` ([rules](docs/operator.md)).
 - **Lint.** Add `"jsPlugins": ["wow/oxlint"]` to `.oxlintrc.json` and turn rules on by name, as `"wow/no-silent-catch": "error"`. The rules: `require-disable-reason`, `no-low-value-comments`, `no-silent-catch`, `no-double-cast`, and for Convex, `no-catch-around-own-writes` and `no-any-returns`. The two catch rules take `{ "throwers": [...] }`, the calls that rethrow.
 - **Ratchet.** `pnpm wow-ratchet [paths]` runs the project's own oxlint in place of a bare one. Each (rule, file) keeps exactly its budgeted count, so one more fails and one fewer fails until `wow-ratchet --write` lowers it. `--seed=<rule>` records a new rule's counts as it lands, and nothing raises one. Config: `"ratchet": { "budgets": "lint/grandfathered", "args": [...], "groups": [...], "concurrency": 1 }`. Groups are folders linted apart, and concurrency caps how many oxlint runs at once. It defaults to 1, since each run can take gigabytes on a shared machine (wow 11).
 - **Proof.** After `npm ci`, `npm test` plants a break for every guard, rule and ratchet step (wow 3).

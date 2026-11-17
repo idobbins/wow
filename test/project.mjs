@@ -37,9 +37,9 @@ const run = (root, command, args) => {
   return { status, stdout, stderr };
 };
 
-/** `wow-guard <command>` in `root`. */
-export const guard = (root, command) =>
-  run(root, process.execPath, [join(WOW, "bin/wow-guard.mjs"), command]);
+/** `wow-guard <command> [args]` in `root`. */
+export const guard = (root, command, ...args) =>
+  run(root, process.execPath, [join(WOW, "bin/wow-guard.mjs"), command, ...args]);
 
 /** `wow-ratchet <args>` in `root`. */
 export const ratchet = (root, ...args) =>
