@@ -202,13 +202,14 @@ Each repo keeps its work as a graph in `.wow/dag.jsonl`, and its goal is done: e
 
 ## Toolchain
 
-For JavaScript and TypeScript, use the [Oxc](https://oxc.rs) tools: one fast toolchain with little config, which gives the same result on every run (wow 2, wow 8). Pin exact versions and upgrade them together.
+For JavaScript and TypeScript, use the [Oxc](https://oxc.rs) tools: one fast toolchain with little config, which gives the same result on every run (wow 2, wow 8). Pin exact versions and upgrade them together. A repo in another language, such as a Godot game, keeps its own tools.
 
 - **Lint:** oxlint. No ESLint. Move a config over with `oxlint-migrate`, and write a rule oxlint lacks as a JS plugin (`wow/oxlint` is one).
 - **Format:** oxfmt. No Prettier or Biome. The loop runs `oxfmt --check .`, and `oxfmt .` fixes it.
-- **Type check:** [tsrs](https://github.com/oxc-project/tsrs), the Rust port of the TypeScript 7 checker. Pin its exact version, since it ships as prereleases. No `tsc` or `tsgo`.
-- **Type-aware lint:** with oxlint 1.92 or later and tsrs installed, oxlint uses tsrs in place of tsgolint. `oxlint --type-aware --type-check` lints and type-checks in one run, parsing and checking each program once, and fails on a type error. Drop the separate type-check step (wow 2).
-- **Cap the threads on a shared machine** (wow 11): `RAYON_NUM_THREADS=4` for the lint run, and `--checkers 4` for `tsrs --noEmit --fast`.
+- **Type check:** [tsrs](https://github.com/oxc-project/tsrs), the Rust port of the TypeScript 7 compiler: `tsrs --noEmit` per tsconfig program, or `tsrs -b` with project references. It emits too, so builds use it. No `tsc` or `tsgo`; keep the `typescript` package only for a tool that imports it. Pin it exactly, as `tsrs@7.1.0-beta.tsrs2`: it ships only prereleases, and npm's `latest` is older.
+- **Type-aware lint:** oxlint 1.92 or later finds tsrs and uses it in place of tsgolint, with the same 61 rules and options, so remove `oxlint-tsgolint`. `oxlint --type-aware --type-check` lints and type-checks in one pass, but only the files oxlint lints: not ignored or generated files, declaration files, or errors with no location. Where a program has such files, keep `tsrs --noEmit` beside it. Plant a type error in one to see (wow 3).
+- **Cap the threads on a shared machine** (wow 11): `RAYON_NUM_THREADS=4`, which caps tsrs in the lint run but not oxlint itself, plus `oxlint --threads 4` and `tsrs --noEmit --fast --checkers 4`.
+- **Switch on proof** (wow 9): run the old check and the new one on the same commit, and nothing the old one reports may go missing. Plant a type error and a type-aware lint violation, see the new check catch both, then remove the old one ([steps](docs/tsrs.md)).
 - **Code that reads code:** `oxc-parser`, `oxc-resolver` and `oxc-transform`, not Babel, acorn or enhanced-resolve.
 - **Running TypeScript:** `node script.ts`, with Node 24's own type stripping. Add no runner (wow 7).
 
