@@ -158,15 +158,16 @@ test("concurrency 1, the default, never runs two oxlints at once", () => {
   });
 });
 
+// On an oxlint.config.ts, as a project on @nkzw/oxlint-config has (docs/lint.md).
 test("wow/no-v-any seeds, holds, and fails on one more v.any()", () => {
   const anys = (n) => `export const t = v.object({\n${"  x: v.any(),\n".repeat(n)}});\n`;
   const root = project({
     "package.json": PKG,
-    ".oxlintrc.json": {
+    "oxlint.config.ts": `export default ${JSON.stringify({
       categories: { correctness: "off" },
       jsPlugins: ["wow/oxlint"],
       rules: { "wow/no-v-any": "error" },
-    },
+    })};\n`,
     "convex/schema.ts": anys(2),
     "sub/b.ts": anys(1),
   });
