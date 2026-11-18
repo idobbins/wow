@@ -187,7 +187,7 @@ Write every decision down in one place, and put every question so it can be answ
 - **One ledger of what's open.** What waits on the operator's gates (wow 11) goes in `.wow/needs-isaac.jsonl`, one item per line, with a recommendation. It never holds the decision: the answer goes on the node it decides, and the item closes naming that node.
 - **Answer in a file.** A request from the operator's bot gets a short answer file that leads with the answer and answers or defers every question, and the chat reply is one line naming it. Only a turn that failed, changed the ledger or went live wakes the operator, marked by its last line ([formats, paths and the digest](docs/operator.md)).
 - **Dense, numbered and recommended.** List the quickest calls first, each with a recommendation.
-- **Reviews are HTML.** Anything the operator reviews, such as a draft, a wording list, a report or a postmortem, is one self-contained HTML file (inline styles, no external scripts), not markdown.
+- **Review in the thread.** T3 is the review plane. Put findings, drafts and decisions in the chat reply itself, as concise markdown. Ask decisions in question cards that stand on their own: the question, the options and the recommendation, with no links to files the card can't show. Make an HTML page only for something visual (a chart, a mockup, a diagram) or when the operator asks, and still put the substance in the reply.
 - **"I don't know" is an answer.** Take the recommendation, or explain the item better if it matters.
 - **Never ask twice.** If it's reversible, make the call and offer a veto.
 - **Report in numbers:** what landed, what's running, and what's waiting on whom, in a daily digest the operator's bot reads.
